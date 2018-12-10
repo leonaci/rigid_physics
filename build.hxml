@@ -1,0 +1,19 @@
+-cp src
+
+-dce full
+-js bin/rigidphysics.js
+
+rigid.common.MathUtil
+rigid.common.Vec2
+rigid.common.Vec3
+rigid.dynamics.World
+rigid.dynamics.body.Body
+rigid.dynamics.body.shape.Shape
+rigid.dynamics.body.shape.ShapeKind
+rigid.dynamics.body.shape.SphereShape
+rigid.dynamics.constraint.BallConstraint
+rigid.dynamics.constraint.Constraint
+rigid.dynamics.constraint.ContactConstraint
+rigid.dynamics.constraint.CylindricalConstraint
+rigid.dynamics.constraint.DistanceConstraint
+rigid.dynamics.constraint.MouseConstraint
