@@ -24,50 +24,6 @@ Std.__name__ = true;
 Std.string = function(s) {
 	return js_Boot.__string_rec(s,"");
 };
-var haxe_ds_List = function() {
-	this.length = 0;
-};
-haxe_ds_List.__name__ = true;
-haxe_ds_List.prototype = {
-	push: function(item) {
-		var x = new haxe_ds__$List_ListNode(item,this.h);
-		this.h = x;
-		if(this.q == null) {
-			this.q = x;
-		}
-		this.length++;
-	}
-	,remove: function(v) {
-		var prev = null;
-		var l = this.h;
-		while(l != null) {
-			if(l.item == v) {
-				if(prev == null) {
-					this.h = l.next;
-				} else {
-					prev.next = l.next;
-				}
-				if(this.q == l) {
-					this.q = prev;
-				}
-				this.length--;
-				return true;
-			}
-			prev = l;
-			l = l.next;
-		}
-		return false;
-	}
-	,__class__: haxe_ds_List
-};
-var haxe_ds__$List_ListNode = function(item,next) {
-	this.item = item;
-	this.next = next;
-};
-haxe_ds__$List_ListNode.__name__ = true;
-haxe_ds__$List_ListNode.prototype = {
-	__class__: haxe_ds__$List_ListNode
-};
 var haxe_ds_Option = $hxEnums["haxe.ds.Option"] = { __ename__ : true, __constructs__ : ["Some","None"]
 	,Some: ($_=function(v) { return {_hx_index:0,v:v,__enum__:"haxe.ds.Option",toString:$estr}; },$_.__params__ = ["v"],$_)
 	,None: {_hx_index:1,__enum__:"haxe.ds.Option",toString:$estr}
@@ -452,19 +408,35 @@ rigid_common__$Vec3_Vec3_$Impl_$.toString = function(this1) {
 	return "[ " + this1.x + ", " + this1.y + " ]";
 };
 var rigid_dynamics_World = $hx_exports["RHEI"]["World"] = function() {
-	this.underGravity = true;
-	this.bodies = new haxe_ds_List();
 	this.constraints = [];
 	this.pairManager = new rigid_dynamics_collision_PairManager(rigid_dynamics_collision_broadphase_BroadPhaseKind.BruteForce);
 };
 rigid_dynamics_World.__name__ = true;
 rigid_dynamics_World.prototype = {
 	addBody: function(body) {
-		this.bodies.push(body);
-		this.pairManager.broadPhase.addBody(body);
+		if(this.bodies == null) {
+			this.bodies = body;
+		} else {
+			this.bodies.prev = body;
+			body.next = this.bodies;
+			this.bodies = body;
+		}
+		this.numBodies++;
+		this.pairManager.broadPhase.addBody(this.bodies);
 	}
 	,removeBody: function(body) {
-		this.bodies.remove(body);
+		if(body.prev != null) {
+			body.prev.next = body.next;
+		}
+		if(body.next != null) {
+			body.next.prev = body.prev;
+		}
+		if(body == this.bodies) {
+			this.bodies = body.next;
+		}
+		body.prev = null;
+		body.next = null;
+		this.numBodies--;
 		this.pairManager.broadPhase.removeBody(body);
 	}
 	,addConstraint: function(constraint) {
@@ -486,7 +458,6 @@ rigid_dynamics_World.prototype = {
 				pair = pair.next;
 			}
 			_this1.pairs = null;
-			_this1.lastPair = null;
 			_this1.numPairs = 0;
 		}
 		_this.broadPhase.updatePairs();
@@ -508,11 +479,11 @@ rigid_dynamics_World.prototype = {
 				contact.s1 = pair1.s1;
 				contact.s2 = pair1.s2;
 				if(_this.contacts == null) {
-					_this.contacts = _this.lastContact = contact;
+					_this.contacts = contact;
 				} else {
-					_this.lastContact.next = contact;
-					contact.prev = _this.lastContact;
-					_this.lastContact = contact;
+					_this.contacts.prev = contact;
+					contact.next = _this.contacts;
+					_this.contacts = contact;
 				}
 				_this.numContacts++;
 				contact.attach();
@@ -553,11 +524,8 @@ rigid_dynamics_World.prototype = {
 				if(contact1.next != null) {
 					contact1.next.prev = contact1.prev;
 				}
-				if(_this2.contacts == contact1) {
-					_this2.contacts = _this2.contacts.next;
-				}
-				if(_this2.lastContact == contact1) {
-					_this2.lastContact = _this2.lastContact.prev;
+				if(contact1 == _this2.contacts) {
+					_this2.contacts = contact1.next;
 				}
 				contact1.next = null;
 				contact1.prev = null;
@@ -604,54 +572,60 @@ rigid_dynamics_World.prototype = {
 			++_g21;
 			c2.solveMoment();
 		}
-		var _g_head = this.bodies.h;
-		while(_g_head != null) {
-			var val = _g_head.item;
-			_g_head = _g_head.next;
-			var b = val;
-			if(this.underGravity) {
-				var _g6 = b;
-				var v = _g6.transform.p;
-				var b_ = _g6.transform.m;
+		if(this.underGravity) {
+			var body = this.bodies;
+			while(body != null) {
+				var b_ = body.transform.m;
 				var a_ = b_ == 0 ? 0 : 1 / b_;
-				var s = a_;
-				var v1_x = v.x * s;
-				var v1_y = v.y * s;
-				var v2_x = 0.0;
-				var v2_y = -50.0;
-				var v_x = v1_x + v2_x;
-				var v_y = v1_y + v2_y;
-				var s1 = _g6.transform.m;
-				var this1 = { x : v_x * s1, y : v_y * s1};
-				_g6.transform.p = this1;
+				if((a_ != 0 ? rigid_dynamics_body_BodyState.Dynamic : rigid_dynamics_body_BodyState.Static) == rigid_dynamics_body_BodyState.Dynamic) {
+					var _g6 = body;
+					var v = _g6.transform.p;
+					var b_1 = _g6.transform.m;
+					var a_1 = b_1 == 0 ? 0 : 1 / b_1;
+					var s = a_1;
+					var v1_x = v.x * s;
+					var v1_y = v.y * s;
+					var v2_x = 0.0;
+					var v2_y = -50.0;
+					var v_x = v1_x + v2_x;
+					var v_y = v1_y + v2_y;
+					var s1 = _g6.transform.m;
+					var this1 = { x : v_x * s1, y : v_y * s1};
+					_g6.transform.p = this1;
+				}
+				body = body.next;
 			}
-			var b_1 = b.transform.m;
-			var a_1 = b_1 == 0 ? 0 : 1 / b_1;
-			switch((a_1 != 0 ? rigid_dynamics_body_BodyState.Dynamic : rigid_dynamics_body_BodyState.Static)._hx_index) {
+		}
+		var body1 = this.bodies;
+		while(body1 != null) {
+			var b_2 = body1.transform.m;
+			var a_2 = b_2 == 0 ? 0 : 1 / b_2;
+			switch((a_2 != 0 ? rigid_dynamics_body_BodyState.Dynamic : rigid_dynamics_body_BodyState.Static)._hx_index) {
 			case 0:
-				var v1 = b.transform.q;
-				var v2 = b.transform.p;
-				var s2 = b.transform.m;
+				var v1 = body1.transform.q;
+				var v2 = body1.transform.p;
+				var s2 = body1.transform.m;
 				var v_x1 = v2.x / s2;
 				var v_y1 = v2.y / s2;
 				var v2_x1 = v_x1 * dt;
 				var v2_y1 = v_y1 * dt;
 				var this2 = { x : v1.x + v2_x1, y : v1.y + v2_y1};
-				b.transform.q = this2;
-				var _g14 = b.transform.qa;
-				var a = b.transform.pa;
-				var a_2 = b.transform.m;
-				var b_2 = a_2 * b.shape.get_inertia();
-				var a_3 = b_2 == 0 ? 0 : 1 / b_2;
-				var a_4 = a_3 * a;
-				var a_5 = a_4 * dt;
-				b.transform.qa = a_5 + _g14;
-				b.transform.qa %= 6.28318530717958;
+				body1.transform.q = this2;
+				var _g14 = body1.transform.qa;
+				var a = body1.transform.pa;
+				var a_3 = body1.transform.m;
+				var b_3 = a_3 * body1.shape.get_inertia();
+				var a_4 = b_3 == 0 ? 0 : 1 / b_3;
+				var a_5 = a_4 * a;
+				var a_6 = a_5 * dt;
+				body1.transform.qa = a_6 + _g14;
+				body1.transform.qa %= 6.28318530717958;
 				break;
 			case 1:
 				break;
 			}
-			b.shape.calcAABB(b.transform);
+			body1.shape.calcAABB(body1.transform);
+			body1 = body1.next;
 		}
 	}
 	,removeContacts: function() {
@@ -750,6 +724,28 @@ rigid_dynamics_body_Body.prototype = {
 		} else {
 			return rigid_dynamics_body_BodyState.Static;
 		}
+	}
+	,addTo: function(body) {
+		if(body == null) {
+			body = this;
+		} else {
+			body.prev = this;
+			this.next = body;
+			body = this;
+		}
+	}
+	,removeFrom: function(body) {
+		if(this.prev != null) {
+			this.prev.next = this.next;
+		}
+		if(this.next != null) {
+			this.next.prev = this.prev;
+		}
+		if(this == body) {
+			body = this.next;
+		}
+		this.prev = null;
+		this.next = null;
 	}
 	,__class__: rigid_dynamics_body_Body
 };
@@ -897,7 +893,7 @@ rigid_dynamics_collision_broadphase_AABB.prototype = {
 };
 var rigid_dynamics_collision_broadphase_BroadPhase = function() {
 	this.numPairs = 0;
-	this.bodies = [];
+	this.numBodies = 0;
 };
 rigid_dynamics_collision_broadphase_BroadPhase.__name__ = true;
 rigid_dynamics_collision_broadphase_BroadPhase.prototype = {
@@ -905,11 +901,15 @@ rigid_dynamics_collision_broadphase_BroadPhase.prototype = {
 		throw new js__$Boot_HaxeError("Not Implemented.");
 	}
 	,addBody: function(body) {
-		this.bodies.push(body);
+		this.bodies = body;
+		this.numBodies++;
 		body.shape.calcAABB(body.transform);
 	}
 	,removeBody: function(body) {
-		HxOverrides.remove(this.bodies,body);
+		if(body == this.bodies) {
+			this.bodies = body.next;
+		}
+		this.numBodies--;
 	}
 	,__class__: rigid_dynamics_collision_broadphase_BroadPhase
 };
@@ -923,16 +923,12 @@ rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.__name__ = t
 rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.__super__ = rigid_dynamics_collision_broadphase_BroadPhase;
 rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.prototype = $extend(rigid_dynamics_collision_broadphase_BroadPhase.prototype,{
 	updatePairs: function() {
-		var _g = 1;
-		var _g1 = this.bodies.length;
-		while(_g < _g1) {
-			var i = _g++;
-			var _g2 = 0;
-			var _g11 = i;
-			while(_g2 < _g11) {
-				var j = _g2++;
-				var b1 = this.bodies[i];
-				var b2 = this.bodies[j];
+		var i = 1;
+		var b1 = this.bodies.next;
+		while(i++ < this.numBodies) {
+			var j = 0;
+			var b2 = this.bodies;
+			while(j++ < i) {
 				var aabb1 = b1.shape.aabb;
 				var aabb2 = b2.shape.aabb;
 				if(aabb1.edgeMinX.pos < aabb2.edgeMaxX.pos && aabb2.edgeMinX.pos < aabb1.edgeMaxX.pos && aabb1.edgeMinY.pos < aabb2.edgeMaxY.pos && aabb2.edgeMinY.pos < aabb1.edgeMaxY.pos) {
@@ -940,15 +936,17 @@ rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.prototype = 
 					pair.s1 = b1.shape;
 					pair.s2 = b2.shape;
 					if(this.pairs == null) {
-						this.pairs = this.lastPair = pair;
+						this.pairs = pair;
 					} else {
-						this.lastPair.next = pair;
-						pair.prev = this.lastPair;
-						this.lastPair = pair;
+						this.pairs.prev = pair;
+						pair.next = this.pairs;
+						this.pairs = pair;
 					}
 					this.numPairs++;
 				}
+				b2 = b2.next;
 			}
+			b1 = b1.next;
 		}
 	}
 	,__class__: rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase
@@ -1039,7 +1037,7 @@ rigid_dynamics_constraint_ContactConstraint.prototype = $extend(rigid_dynamics_c
 		var this1 = { x : -this.n.y, y : this.n.x};
 		this.t = this1;
 		this.friction = 0.1;
-		this.restitution = 0.5;
+		this.restitution = 0.8;
 		this.threshold = 0.2;
 		var b_ = this.p1.m;
 		var a_ = b_ == 0 ? 0 : 1 / b_;

@@ -19,6 +19,9 @@ enum BodyState {
 
 @:expose("RHEI.Body")
 class Body {
+	public var prev:Body;
+	public var next:Body;
+	
 	//動力学に関する全ての情報
 	public var transform(default, null):Transform;
 	
@@ -87,5 +90,22 @@ class Body {
 	@:extern
 	public inline function sync() {
 		shape.calcAABB(transform);
+	}
+	
+	public function addTo(body:Body):Void {
+		if (body == null) body = this;
+		else {
+			body.prev = this;
+			this.next = body;
+			body = this;
+		}
+	}
+	
+	public function removeFrom(body:Body):Void {
+		if (this.prev != null) this.prev.next = this.next;
+		if (this.next != null) this.next.prev = this.prev;
+		if (this == body) body = this.next;
+		this.prev = null;
+		this.next = null;
 	}
 }

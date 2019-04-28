@@ -17,25 +17,37 @@ import rigid.dynamics.constraint.ContactConstraint;
 @:expose("RHEI.World")
 class World {
 	public var underGravity:Bool;
-	public var bodies(default, null):List<Body>;
+	
+	public var numBodies(default, null):Int;
+	public var bodies(default, null):Body;
+	
 	public var constraints(default, null):Array<Constraint>;
 	
 	private var pairManager:PairManager;
 	
 	public function new() {
-		this.underGravity = true;
-		this.bodies = new List();
 		this.constraints = [];
 		this.pairManager = new PairManager(BroadPhaseKind.BruteForce);
 	}
 	
 	public function addBody(body:Body) {
-		bodies.push(body);
-		pairManager.broadPhase.addBody(body);
+		if (bodies == null) bodies = body;
+		else {
+			bodies.prev = body;
+			body.next = bodies;
+			bodies = body;
+		}
+		numBodies++;
+		pairManager.broadPhase.addBody(bodies);
 	}
 	
 	public function removeBody(body:Body) {
-		bodies.remove(body);
+		if (body.prev != null) body.prev.next = body.next;
+		if (body.next != null) body.next.prev = body.prev;
+		if (body == bodies) bodies = body.next;
+		body.prev = null;
+		body.next = null;
+		numBodies--;
 		pairManager.broadPhase.removeBody(body);
 	}
 	
@@ -50,6 +62,7 @@ class World {
 	public function step(dt:Float) {
 		detectConstraints();
 		solveConstraints(dt);
+		if(underGravity) integrateGravity();
 		integrate(dt);
 	}
 
@@ -85,11 +98,21 @@ class World {
 	}
 	
 	@:extern
+	private inline function integrateGravity() {
+		var body = bodies;
+		while (body != null) {
+			if (body.state == BodyState.Dynamic) body.v += new Vec2(Constant.GRAVITY_X, Constant.GRAVITY_Y);
+			body = body.next;
+		}
+	}
+	
+	@:extern
 	private inline function integrate(dt:Float) {
-		for (b in bodies) {
-			if (underGravity) b.v += new Vec2(Constant.GRAVITY_X, Constant.GRAVITY_Y);
-			b.integrate(dt);
-			b.sync();
+		var body = bodies;
+		while (body != null) {
+			body.integrate(dt);
+			body.sync();
+			body = body.next;
 		}
 	}
 	

@@ -14,7 +14,6 @@ import rigid.dynamics.collision.narrowphase.NarrowPhase;
 class PairManager {
 	public var numContacts(default, null):Int;
 	public var contacts(default, null):Contact;
-	private var lastContact:Contact;
 	
 	public var broadPhase(default, null):BroadPhase;
 	public var narrowPhase(default, null):NarrowPhase;
@@ -91,11 +90,11 @@ class PairManager {
 	
 	@:extern
 	private inline function addContact(c:Contact) {
-		if (contacts == null) contacts = lastContact = c;
+		if (contacts == null) contacts = c;
 		else {
-			lastContact.next = c;
-			c.prev = lastContact;
-			lastContact = c;
+			contacts.prev = c;
+			c.next = contacts;
+			contacts = c;
 		}
 		numContacts++;
 	}
@@ -105,8 +104,7 @@ class PairManager {
 		c.detach();
 		if (c.prev != null) c.prev.next = c.next;
 		if (c.next != null) c.next.prev = c.prev;
-		if (contacts == c) contacts = contacts.next;
-		if (lastContact == c) lastContact = lastContact.prev;
+		if (c == contacts) contacts = c.next;
 		c.next = null;
 		c.prev = null;
 		c.constraint = null;

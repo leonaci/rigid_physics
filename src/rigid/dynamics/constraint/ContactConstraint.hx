@@ -40,7 +40,7 @@ class ContactConstraint extends Constraint {
 		this.t = new Vec2(-n.y, n.x);
 		
 		this.friction = 0.1;
-		this.restitution = 0.5;
+		this.restitution = 0.8;
 		this.threshold = 0.2;
 		
 		var im1 = 1/p1.m, im2 = 1/p2.m, ii1 = 1/p1.i, ii2 = 1/p2.i;

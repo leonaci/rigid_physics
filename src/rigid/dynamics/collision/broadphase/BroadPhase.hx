@@ -9,24 +9,24 @@ import rigid.dynamics.collision.Pair;
 class BroadPhase {
 	public var numPairs(default, null):Int;
 	public var pairs(default, null):Pair;
-	public var lastPair(default, null):Pair;
 	
-	public var bodies:Array<Body>;
+	public var numBodies:Int;
+	public var bodies:Body;
 	
 	
 	public function new() {
 		numPairs = 0;
-		bodies = [];
+		numBodies = 0;
 	}
 	
 	public function updatePairs() throw 'Not Implemented.';
 	
 	private inline function addPair(p:Pair) {
-		if (pairs == null) pairs = lastPair = p;
+		if (pairs == null) pairs = p;
 		else {
-			lastPair.next = p;
-			p.prev = lastPair;
-			lastPair = p;
+			pairs.prev = p;
+			p.next = pairs;
+			pairs = p;
 		}
 		numPairs++;
 	}
@@ -43,17 +43,18 @@ class BroadPhase {
 			pair = pair.next;
 		}
 		pairs = null;
-		lastPair = null;
 		numPairs = 0;
 	}
 	
 	public function addBody(body:Body) {
-		bodies.push(body);
+		bodies = body;
+		numBodies++;
 		body.sync();
 	}
 	
 	public function removeBody(body:Body) {
-		bodies.remove(body);
+		if (body == bodies) bodies = body.next;
+		numBodies--;
 	}
 	
 	private inline function overlap(aabb1:AABB, aabb2:AABB) {
