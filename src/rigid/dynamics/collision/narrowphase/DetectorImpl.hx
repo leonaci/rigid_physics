@@ -1,16 +1,14 @@
 package rigid.dynamics.collision.narrowphase;
+import haxe.ds.Option;
 import rigid.dynamics.body.Body;
-import rigid.dynamics.collision.Contact;
+import rigid.dynamics.constraint.ContactConstraint;
 
 /**
  * ...
  * @author leonaci
  */
 class DetectorImpl {
-	var b1:Body;
-	var b2:Body;
-
 	public function new() {}
 
-	public function detect():Contact throw 'Not Implemented.';
+	public function detect(b1:Body, b2:Body):Option<ContactConstraint> throw 'Not Implemented.';
 }

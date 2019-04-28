@@ -1,6 +1,7 @@
 package rigid.dynamics.collision.narrowphase;
+import haxe.ds.Option;
 import rigid.dynamics.body.Body;
-import rigid.dynamics.body.shape.ShapeKind;
+import rigid.dynamics.constraint.ContactConstraint;
 
 /**
  * ...
@@ -8,18 +9,10 @@ import rigid.dynamics.body.shape.ShapeKind;
  */
  
 class Detector {
-	var impl:DetectorImpl;
+	@:allow(rigid.dynamics.collision.narrowphase.NarrowPhase.chooseDetector)
+	private var impl:DetectorImpl;
 	
-	public function new(b1:Body, b2:Body) {
-		var s1 = b1.shape, s2 = b2.shape;
-		this.impl = switch(s1.kind) {
-			case ShapeKind.Sphere:
-				switch(s2.kind) {
-					case ShapeKind.Sphere: new SphereSphereDetector(b1, b2);
-				}
-		};
-	}
+	public function new() {}
 	
-	@:extern
-	public inline function detect() return impl.detect();
+	public inline function detect(b1:Body, b2:Body):Option<ContactConstraint> return impl.detect(b1, b2);
 }

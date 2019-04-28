@@ -1,22 +1,17 @@
 package rigid.dynamics.collision;
+import rigid.dynamics.body.Body;
+import rigid.dynamics.body.shape.Shape;
 
 /**
- * ...
+ * Linked list of possibly-collided pairs.
  * @author leonaci
  */
-abstract Pair(Contact) to Contact {
-	inline function new(c:Contact) this = c;
+class Pair {
+	public var prev:Pair;
+	public var next:Pair;
 	
-	@:from
-	static public inline function from(c:Contact) return new Pair(c);
+	public var s1:Shape;
+	public var s2:Shape;
 	
-	public inline function detach() this = null;
-	
-	public inline function updateContact() {
-		// judge whether a collision occurs, and if so, generate a constraint.
-		this = switch(this) {
-			case Contact.YET(detector): detector.detect();
-			case _: throw 'Already Judged.';
-		}
-	}
+	public function new() {}
 }

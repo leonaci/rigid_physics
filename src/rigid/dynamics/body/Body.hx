@@ -1,4 +1,5 @@
 package rigid.dynamics.body;
+import haxe.ds.Option;
 import rigid.common.MFloat;
 import rigid.common.MathUtil;
 import rigid.common.Vec2;
@@ -63,6 +64,13 @@ class Body {
 	public function new(shape:Shape) {
 		this.transform = new Transform();
 		this.shape = shape;
+		
+		switch(shape.assigned) {
+			case Option.None:
+				shape.assigned = Option.Some(this);
+			case Option.Some(_):
+				throw 'Not allowed to assign the shape that has been already assigned.';
+		}
 	}
 	
 	@:extern

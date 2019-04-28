@@ -1,5 +1,6 @@
 package rigid.dynamics;
 import haxe.ds.List;
+import haxe.ds.Option;
 import rigid.common.Constant;
 import rigid.common.Vec2;
 import rigid.dynamics.body.Body;
@@ -60,14 +61,20 @@ class World {
 		//narrow phase collision judgement
 		pairManager.narrowJudge();
 		
-		//update constraints
-		for (p in pairManager.pairs.copy()) {
-			switch(p:Contact) {
-				case Contact.TRUE(cc): constraints.push(cc);
-				case Contact.FALSE:
-				case Contact.YET(_): throw 'Not Yet Judged.';
+		//remove old contacts
+		removeContacts();
+		
+		//update contacts
+		var contact:Contact = pairManager.contacts;
+		while (contact != null) {
+			var nextContact = contact.next;
+			
+			switch(contact.constraint) {
+				case Option.Some(cc): constraints.push(cc);
+				case Option.None:
 			}
-			pairManager.removePair(p);
+			
+			contact = nextContact;
 		}
 	}
 	
@@ -75,7 +82,6 @@ class World {
 	private inline function solveConstraints(dt:Float) {
 		for(c in constraints) c.presolve(dt);
 		for(c in constraints) c.solveMoment();
-		removeContacts();
 	}
 	
 	@:extern

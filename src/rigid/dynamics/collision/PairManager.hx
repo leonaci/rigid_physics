@@ -1,4 +1,7 @@
 package rigid.dynamics.collision;
+import haxe.ds.Option;
+import rigid.dynamics.body.shape.ShapeLink;
+import rigid.dynamics.collision.broadphase.AABB;
 import rigid.dynamics.collision.broadphase.BroadPhase;
 import rigid.dynamics.collision.broadphase.BroadPhaseKind;
 import rigid.dynamics.collision.broadphase.bruteforce.BruteForceBroadPhase;
@@ -9,13 +12,15 @@ import rigid.dynamics.collision.narrowphase.NarrowPhase;
  * @author leonaci
  */
 class PairManager {
-	public var pairs:Array<Pair>;
+	public var numContacts(default, null):Int;
+	public var contacts(default, null):Contact;
+	private var lastContact:Contact;
 	
 	public var broadPhase(default, null):BroadPhase;
 	public var narrowPhase(default, null):NarrowPhase;
 
 	public function new(type:BroadPhaseKind) {
-		this.pairs = [];
+		numContacts = 0;
 		
 		this.broadPhase = switch(type) {
 			case BroadPhaseKind.BruteForce: new BruteForceBroadPhase();
@@ -26,32 +31,86 @@ class PairManager {
 	
 	@:extern
 	public inline function broadJudge() {
-		//collect new pairs
+		broadPhase.clearPairs();
+		
+		//collect possibly-collided pairs
 		broadPhase.updatePairs();
 		
-		//create pairs
-		var pairs_ = broadPhase.pairs;
-		for (p_ in pairs_) {
-			//looking for overlapped pairs...
-			var found = false;
-			if (!found) pairs.push(p_);
-		}
-		
-		//destroy seperated pairs
-		for (p in pairs.copy()) {
-			var touching = true;
-			if (!touching) removePair(p);
+		//create contacts
+		var pair:Pair = broadPhase.pairs;
+		while(pair != null) {
+			var nextPair = pair.next;
+			createContact(pair);
+			pair = nextPair;
 		}
 	}
 	
 	@:extern
 	public inline function narrowJudge() {
-		pairs = [for (p in pairs) {p.updateContact(); p;}];
+		var contact:Contact = contacts;
+		while (contact != null) {
+			var nextContact = contact.next; // elements of `contacts` are maybe removed.
+			
+			var touching = contact.newContact || overlap(contact.s1.aabb, contact.s2.aabb);
+			// update collision data : destroy seperated pairs
+			touching? narrowPhase.detect(contact) : removeContact(contact);
+			contact.newContact = false;
+			
+			contact = nextContact;
+		}
 	}
 	
-	public inline function removePair(p:Pair) {
-		pairs.remove(p);
-		p.detach();
+	private inline function overlap(aabb1:AABB, aabb2:AABB) {
+		return aabb1.minX < aabb2.maxX
+			&& aabb2.minX < aabb1.maxX
+			&& aabb1.minY < aabb2.maxY
+			&& aabb2.minY < aabb1.maxY;
+	}
+	
+	@:extern
+	private inline function createContact(pair:Pair):Void {
+		var found = false;
+		
+		//looking for duplicated pairs...
+		var shapeLink:ShapeLink = pair.s1.shapeLinks;
+		while (shapeLink != null) {
+			var nextShapeLink = shapeLink.next;
+			if (shapeLink.theOtherShape == pair.s2) found = true;
+			shapeLink = nextShapeLink;
+		}
+		
+		if (!found) {
+			var contact = new Contact();
+			contact.newContact = true;
+			contact.s1 = pair.s1;
+			contact.s2 = pair.s2;
+			addContact(contact);
+			contact.attach();
+		}
+	}
+	
+	@:extern
+	private inline function addContact(c:Contact) {
+		if (contacts == null) contacts = lastContact = c;
+		else {
+			lastContact.next = c;
+			c.prev = lastContact;
+			lastContact = c;
+		}
+		numContacts++;
+	}
+	
+	@:extern
+	public inline function removeContact(c:Contact) {
+		c.detach();
+		if (c.prev != null) c.prev.next = c.next;
+		if (c.next != null) c.next.prev = c.prev;
+		if (contacts == c) contacts = contacts.next;
+		if (lastContact == c) lastContact = lastContact.prev;
+		c.next = null;
+		c.prev = null;
+		c.constraint = null;
+		numContacts--;
 	}
 }
 
