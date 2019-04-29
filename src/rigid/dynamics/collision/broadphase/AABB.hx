@@ -1,4 +1,5 @@
 package rigid.dynamics.collision.broadphase;
+import rigid.dynamics.body.shape.Shape;
 import rigid.dynamics.collision.broadphase.AABBEdge;
 
 /**
@@ -6,6 +7,8 @@ import rigid.dynamics.collision.broadphase.AABBEdge;
  * @author leonaci
  */
 class AABB {
+	public var shape:Shape;
+	
 	public var minX(get, set):Float;
 	inline function get_minX():Float return edgeMinX.pos;
 	inline function set_minX(minX:Float):Float return edgeMinX.pos = minX;
@@ -28,7 +31,6 @@ class AABB {
 	public var edgeMaxY(default,null):AABBEdge;
 	
 	public inline function new() {
-		
 		edgeMinX = new AABBEdge(this, 0.0, true);
 		edgeMaxX = new AABBEdge(this, 0.0, false);
 		edgeMinX.theOther = edgeMaxX;

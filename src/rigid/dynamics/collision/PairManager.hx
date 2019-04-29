@@ -5,6 +5,7 @@ import rigid.dynamics.collision.broadphase.AABB;
 import rigid.dynamics.collision.broadphase.BroadPhase;
 import rigid.dynamics.collision.broadphase.BroadPhaseKind;
 import rigid.dynamics.collision.broadphase.bruteforce.BruteForceBroadPhase;
+import rigid.dynamics.collision.broadphase.sweepandprune.SweepAndPruneBroadPhase;
 import rigid.dynamics.collision.narrowphase.NarrowPhase;
 
 /**
@@ -23,6 +24,7 @@ class PairManager {
 		
 		this.broadPhase = switch(type) {
 			case BroadPhaseKind.BruteForce: new BruteForceBroadPhase();
+			case BroadPhaseKind.SweepAndPrune: new SweepAndPruneBroadPhase();
 		}
 		
 		this.narrowPhase = new NarrowPhase();

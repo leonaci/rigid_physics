@@ -10,10 +10,6 @@ import rigid.dynamics.collision.broadphase.AABB;
  */
 @:expose("RHEI.Shape")
  class Shape implements IShape {
-	public static var UID:Int = 0;
-	
-	public var uid:Int;
-	
 	@:allow(rigid.dynamics.body.Body)
 	public var assigned(default, null):Option<Body>;
 	
@@ -28,9 +24,9 @@ import rigid.dynamics.collision.broadphase.AABB;
 	
 
 	public function new() {
-		uid = UID++;
 		assigned = Option.None;
 		aabb = new AABB();
+		aabb.shape = this;
 	}
 	
 	public function calcAABB(transform:Transform) throw 'Not Implemented.';

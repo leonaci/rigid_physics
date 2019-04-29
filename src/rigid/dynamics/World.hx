@@ -27,7 +27,7 @@ class World {
 	
 	public function new() {
 		this.constraints = [];
-		this.pairManager = new PairManager(BroadPhaseKind.BruteForce);
+		this.pairManager = new PairManager(BroadPhaseKind.SweepAndPrune);
 	}
 	
 	public function addBody(body:Body) {
