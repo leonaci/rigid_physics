@@ -34,13 +34,9 @@ class AABB {
 	public inline function new() {
 		edgeMinX = new AABBEdge(this, 0.0, true);
 		edgeMaxX = new AABBEdge(this, 0.0, false);
-		edgeMinX.theOther = edgeMaxX;
-		edgeMaxX.theOther = edgeMinX;
 		
 		edgeMinY = new AABBEdge(this, 0.0, true);
 		edgeMaxY = new AABBEdge(this, 0.0, false);
-		edgeMinY.theOther = edgeMaxY;
-		edgeMaxY.theOther = edgeMinY;
 	}
 	
 	public function getMinX():Float return edgeMinX.pos;

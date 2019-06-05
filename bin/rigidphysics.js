@@ -893,14 +893,10 @@ var rigid_dynamics_collision_broadphase_AABB = $hx_exports["RHEI"]["AABB"] = fun
 	this.edgeMinX = this1;
 	var this2 = { aabb : this, pos : 0.0, entry : false};
 	this.edgeMaxX = this2;
-	this.edgeMinX.theOther = this.edgeMaxX;
-	this.edgeMaxX.theOther = this.edgeMinX;
 	var this3 = { aabb : this, pos : 0.0, entry : true};
 	this.edgeMinY = this3;
 	var this4 = { aabb : this, pos : 0.0, entry : false};
 	this.edgeMaxY = this4;
-	this.edgeMinY.theOther = this.edgeMaxY;
-	this.edgeMaxY.theOther = this.edgeMinY;
 };
 rigid_dynamics_collision_broadphase_AABB.__name__ = true;
 rigid_dynamics_collision_broadphase_AABB.prototype = {
@@ -982,7 +978,6 @@ rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.prototype = 
 var rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$ = {};
 rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.__name__ = true;
 rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.sort = function(this1) {
-	var c = 0;
 	var _g = 1;
 	var _g1 = this1.length;
 	while(_g < _g1) {
@@ -992,7 +987,6 @@ rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$I
 			var j = i;
 			while(true) {
 				this1[j--] = this1[j];
-				++c;
 				if(!(j > 0 && this1[j - 1].pos > tmp.pos)) {
 					break;
 				}
@@ -1008,6 +1002,7 @@ var rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase = 
 	var this2 = [];
 	this.axisY = this2;
 	this.activeAABBs = [];
+	this.selectX = null;
 };
 rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.__name__ = true;
 rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.__super__ = rigid_dynamics_collision_broadphase_BroadPhase;
@@ -1083,8 +1078,8 @@ rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.protot
 				break;
 			}
 		}
-		var axis = sumX < sumY ? this.axisX : this.axisY;
-		this.activeAABBs[0] = axis[0].aabb;
+		var axis = (this.selectX = sumX < sumY) ? this.axisX : this.axisY;
+		this.activeAABBs.push(axis[0].aabb);
 		var _g = 1;
 		var _g1 = axis.length;
 		while(_g < _g1) {
@@ -1096,7 +1091,7 @@ rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.protot
 				while(_g2 < _g11.length) {
 					var aabb2 = _g11[_g2];
 					++_g2;
-					if(aabb1.edgeMinX.pos < aabb2.edgeMaxX.pos && aabb2.edgeMinX.pos < aabb1.edgeMaxX.pos && aabb1.edgeMinY.pos < aabb2.edgeMaxY.pos && aabb2.edgeMinY.pos < aabb1.edgeMaxY.pos) {
+					if(this.selectX ? aabb1.edgeMinY.pos < aabb2.edgeMaxY.pos && aabb2.edgeMinY.pos < aabb1.edgeMaxY.pos : aabb1.edgeMinX.pos < aabb2.edgeMaxX.pos && aabb2.edgeMinX.pos < aabb1.edgeMaxX.pos) {
 						var pair = new rigid_dynamics_collision_Pair();
 						pair.s1 = aabb1.shape;
 						pair.s2 = aabb2.shape;

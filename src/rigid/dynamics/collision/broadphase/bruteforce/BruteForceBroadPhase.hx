@@ -29,4 +29,11 @@ class BruteForceBroadPhase extends BroadPhase {
 			b1 = b1.next;
 		}
 	}
+	
+	private inline function overlap(aabb1:AABB, aabb2:AABB):Bool {
+		return aabb1.minX < aabb2.maxX
+			&& aabb2.minX < aabb1.maxX
+			&& aabb1.minY < aabb2.maxY
+			&& aabb2.minY < aabb1.maxY;
+	}
 }

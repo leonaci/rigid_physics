@@ -13,6 +13,7 @@ class SweepAndPruneBroadPhase extends BroadPhase
 	private var axisX:AABBEdgeList;
 	private var axisY:AABBEdgeList;
 	private var activeAABBs:Array<AABB>;
+	private var selectX:Bool;
 
 	public function new() 
 	{
@@ -21,14 +22,15 @@ class SweepAndPruneBroadPhase extends BroadPhase
 		axisX = new AABBEdgeList();
 		axisY = new AABBEdgeList();
 		activeAABBs = [];
+		selectX = null;
 	}
 	
 	override public function addBody(body:Body) {
 		super.addBody(body);
-		axisX.insert(body.aabb.edgeMinX);
-		axisY.insert(body.aabb.edgeMinY);
-		axisX.insert(body.aabb.edgeMaxX);
-		axisY.insert(body.aabb.edgeMaxY);
+		axisX.push(body.aabb.edgeMinX);
+		axisY.push(body.aabb.edgeMinY);
+		axisX.push(body.aabb.edgeMaxX);
+		axisY.push(body.aabb.edgeMaxY);
 	}
 	
 	override public function removeBody(body:Body) {
@@ -42,7 +44,7 @@ class SweepAndPruneBroadPhase extends BroadPhase
 	override public function updatePairs():Void {
 		var axis:AABBEdgeList = selectAxis();
 		
-		activeAABBs[0] = axis[0].aabb;
+		activeAABBs.push(axis[0].aabb);
 		for (i in 1...axis.length) {
 			var aabb1:AABB = axis[i].aabb;
 			if (axis[i].entry) {
@@ -60,6 +62,7 @@ class SweepAndPruneBroadPhase extends BroadPhase
 		}
 	}
 	
+	// select the less-overlapped axis
 	private inline function selectAxis():AABBEdgeList {
 		var sumX = 0;
 		var ptX = 0;
@@ -91,6 +94,14 @@ class SweepAndPruneBroadPhase extends BroadPhase
 			}
 		}
 		
-		return sumX < sumY? axisX: axisY;
+		return (selectX = sumX < sumY)? axisX : axisY;
+	}
+	
+	private inline function overlap(aabb1:AABB, aabb2:AABB):Bool {
+		return selectX?
+			   aabb1.minY < aabb2.maxY
+			&& aabb2.minY < aabb1.maxY :
+			   aabb1.minX < aabb2.maxX
+			&& aabb2.minX < aabb1.maxX;
 	}
 }
