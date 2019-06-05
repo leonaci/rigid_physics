@@ -18,6 +18,13 @@ HxOverrides.remove = function(a,obj) {
 	a.splice(i,1);
 	return true;
 };
+HxOverrides.iter = function(a) {
+	return { cur : 0, arr : a, hasNext : function() {
+		return this.cur < this.arr.length;
+	}, next : function() {
+		return this.arr[this.cur++];
+	}};
+};
 Math.__name__ = true;
 var Std = function() { };
 Std.__name__ = true;
@@ -240,9 +247,6 @@ js_Boot.__resolveNativeClass = function(name) {
 };
 var rigid_common_MathUtil = $hx_exports["RHEI"]["MathUtil"] = function() { };
 rigid_common_MathUtil.__name__ = true;
-rigid_common_MathUtil.get_PI = function() {
-	return 3.14159265358979;
-};
 rigid_common_MathUtil.sin = function(v) {
 	return Math.sin(v);
 };
@@ -409,7 +413,8 @@ rigid_common__$Vec3_Vec3_$Impl_$.toString = function(this1) {
 };
 var rigid_dynamics_World = $hx_exports["RHEI"]["World"] = function() {
 	this.constraints = [];
-	this.pairManager = new rigid_dynamics_collision_PairManager(rigid_dynamics_collision_broadphase_BroadPhaseKind.BruteForce);
+	this.numBodies = 0;
+	this.pairManager = new rigid_dynamics_collision_PairManager(rigid_dynamics_collision_broadphase_BroadPhaseKind.SweepAndPrune);
 };
 rigid_dynamics_World.__name__ = true;
 rigid_dynamics_World.prototype = {
@@ -446,6 +451,8 @@ rigid_dynamics_World.prototype = {
 		HxOverrides.remove(this.constraints,constraint);
 	}
 	,step: function(dt) {
+		var a = Date.now() / 1000;
+		var a1 = Date.now() / 1000;
 		var _this = this.pairManager;
 		var _this1 = _this.broadPhase;
 		if(_this1.pairs != null) {
@@ -490,6 +497,9 @@ rigid_dynamics_World.prototype = {
 			}
 			pair1 = nextPair;
 		}
+		var b = Date.now() / 1000;
+		util_Statistics.broadphaseProcessElapsedTime = (b - a1) * 1000;
+		var a2 = Date.now() / 1000;
 		var _this2 = this.pairManager;
 		var contact1 = _this2.contacts;
 		while(contact1 != null) {
@@ -505,13 +515,22 @@ rigid_dynamics_World.prototype = {
 			if(touching) {
 				var _this3 = _this2.narrowPhase;
 				var _g = contact1.s2.kind;
-				var _g1 = contact1.s1.kind;
-				_this3.detector.impl = _this3.sphereSphereDetector;
-				var _g2 = contact1.s2.assigned;
+				var tmp;
+				switch(contact1.s1.kind) {
+				case "Sphere":
+					switch(_g) {
+					case "Sphere":
+						tmp = _this3.sphereSphereDetector;
+						break;
+					}
+					break;
+				}
+				_this3.detector.impl = tmp;
+				var _g1 = contact1.s2.assigned;
 				var _g11 = contact1.s1.assigned;
-				if(_g11._hx_index == 0 && _g2._hx_index == 0) {
+				if(_g11._hx_index == 0 && _g1._hx_index == 0) {
 					var b1 = _g11.v;
-					var b2 = _g2.v;
+					var b2 = _g1.v;
 					contact1.constraint = _this3.detector.impl.detect(b1,b2);
 				} else {
 					throw new js__$Boot_HaxeError("Any body does not be assigned.");
@@ -535,11 +554,11 @@ rigid_dynamics_World.prototype = {
 			contact1.newContact = false;
 			contact1 = nextContact;
 		}
-		var _g3 = 0;
+		var _g2 = 0;
 		var _g12 = this.constraints;
-		while(_g3 < _g12.length) {
-			var c = _g12[_g3];
-			++_g3;
+		while(_g2 < _g12.length) {
+			var c = _g12[_g2];
+			++_g2;
 			if(((c) instanceof rigid_dynamics_constraint_ContactConstraint)) {
 				this.removeConstraint(c);
 			}
@@ -547,10 +566,10 @@ rigid_dynamics_World.prototype = {
 		var contact2 = this.pairManager.contacts;
 		while(contact2 != null) {
 			var nextContact1 = contact2.next;
-			var _g4 = contact2.constraint;
-			switch(_g4._hx_index) {
+			var _g3 = contact2.constraint;
+			switch(_g3._hx_index) {
 			case 0:
-				var cc = _g4.v;
+				var cc = _g3.v;
 				this.constraints.push(cc);
 				break;
 			case 1:
@@ -558,11 +577,14 @@ rigid_dynamics_World.prototype = {
 			}
 			contact2 = nextContact1;
 		}
-		var _g5 = 0;
+		var b3 = Date.now() / 1000;
+		util_Statistics.narrowphaseProcessElapsedTime = (b3 - a2) * 1000;
+		var a3 = Date.now() / 1000;
+		var _g4 = 0;
 		var _g13 = this.constraints;
-		while(_g5 < _g13.length) {
-			var c1 = _g13[_g5];
-			++_g5;
+		while(_g4 < _g13.length) {
+			var c1 = _g13[_g4];
+			++_g4;
 			c1.presolve(dt);
 		}
 		var _g21 = 0;
@@ -572,26 +594,29 @@ rigid_dynamics_World.prototype = {
 			++_g21;
 			c2.solveMoment();
 		}
+		var b4 = Date.now() / 1000;
+		util_Statistics.resolutionProcessElapsedTime = (b4 - a3) * 1000;
+		var a4 = Date.now() / 1000;
 		if(this.underGravity) {
 			var body = this.bodies;
 			while(body != null) {
 				var b_ = body.transform.m;
 				var a_ = b_ == 0 ? 0 : 1 / b_;
 				if((a_ != 0 ? rigid_dynamics_body_BodyState.Dynamic : rigid_dynamics_body_BodyState.Static) == rigid_dynamics_body_BodyState.Dynamic) {
-					var _g6 = body;
-					var v = _g6.transform.p;
-					var b_1 = _g6.transform.m;
+					var _g5 = body;
+					var v = _g5.transform.p;
+					var b_1 = _g5.transform.m;
 					var a_1 = b_1 == 0 ? 0 : 1 / b_1;
 					var s = a_1;
 					var v1_x = v.x * s;
 					var v1_y = v.y * s;
 					var v2_x = 0.0;
 					var v2_y = -50.0;
-					var v_x = v1_x + v2_x;
-					var v_y = v1_y + v2_y;
-					var s1 = _g6.transform.m;
-					var this1 = { x : v_x * s1, y : v_y * s1};
-					_g6.transform.p = this1;
+					var this1 = { x : v1_x + v2_x, y : v1_y + v2_y};
+					var v1 = this1;
+					var s1 = _g5.transform.m;
+					var this2 = { x : v1.x * s1, y : v1.y * s1};
+					_g5.transform.p = this2;
 				}
 				body = body.next;
 			}
@@ -602,21 +627,21 @@ rigid_dynamics_World.prototype = {
 			var a_2 = b_2 == 0 ? 0 : 1 / b_2;
 			switch((a_2 != 0 ? rigid_dynamics_body_BodyState.Dynamic : rigid_dynamics_body_BodyState.Static)._hx_index) {
 			case 0:
-				var v1 = body1.transform.q;
+				var v11 = body1.transform.q;
 				var v2 = body1.transform.p;
 				var s2 = body1.transform.m;
-				var v_x1 = v2.x / s2;
-				var v_y1 = v2.y / s2;
-				var v2_x1 = v_x1 * dt;
-				var v2_y1 = v_y1 * dt;
-				var this2 = { x : v1.x + v2_x1, y : v1.y + v2_y1};
-				body1.transform.q = this2;
+				var v_x = v2.x / s2;
+				var v_y = v2.y / s2;
+				var v2_x1 = v_x * dt;
+				var v2_y1 = v_y * dt;
+				var this3 = { x : v11.x + v2_x1, y : v11.y + v2_y1};
+				body1.transform.q = this3;
 				var _g14 = body1.transform.qa;
-				var a = body1.transform.pa;
+				var a5 = body1.transform.pa;
 				var a_3 = body1.transform.m;
 				var b_3 = a_3 * body1.shape.get_inertia();
 				var a_4 = b_3 == 0 ? 0 : 1 / b_3;
-				var a_5 = a_4 * a;
+				var a_5 = a_4 * a5;
 				var a_6 = a_5 * dt;
 				body1.transform.qa = a_6 + _g14;
 				body1.transform.qa %= 6.28318530717958;
@@ -627,8 +652,12 @@ rigid_dynamics_World.prototype = {
 			body1.shape.calcAABB(body1.transform);
 			body1 = body1.next;
 		}
+		var b5 = Date.now() / 1000;
+		util_Statistics.integrationProcessElapsedTime = (b5 - a4) * 1000;
+		var b6 = Date.now() / 1000;
+		util_Statistics.totalElapsedTime = (b6 - a) * 1000;
 	}
-	,removeContacts: function() {
+	,removeOldContacts: function() {
 		var _g = 0;
 		var _g1 = this.constraints;
 		while(_g < _g1.length) {
@@ -658,74 +687,7 @@ var rigid_dynamics_body_Body = $hx_exports["RHEI"]["Body"] = function(shape) {
 };
 rigid_dynamics_body_Body.__name__ = true;
 rigid_dynamics_body_Body.prototype = {
-	get_q: function() {
-		return this.transform.q;
-	}
-	,set_q: function(q) {
-		return this.transform.q = q;
-	}
-	,get_qa: function() {
-		return this.transform.qa;
-	}
-	,set_qa: function(qa) {
-		return this.transform.qa = qa;
-	}
-	,get_v: function() {
-		var v = this.transform.p;
-		var b_ = this.transform.m;
-		var a_ = b_ == 0 ? 0 : 1 / b_;
-		var s = a_;
-		var this1 = { x : v.x * s, y : v.y * s};
-		return this1;
-	}
-	,set_v: function(v) {
-		var s = this.transform.m;
-		var this1 = { x : v.x * s, y : v.y * s};
-		return this.transform.p = this1;
-	}
-	,get_va: function() {
-		var _g = this.transform.pa;
-		var a_ = this.transform.m;
-		var b_ = a_ * this.shape.get_inertia();
-		var a_1 = b_ == 0 ? 0 : 1 / b_;
-		var a_2 = a_1;
-		return a_2 * _g;
-	}
-	,set_va: function(va) {
-		var a_ = this.transform.m;
-		var a_1 = a_ * this.shape.get_inertia();
-		return this.transform.pa = a_1 * va;
-	}
-	,get_mass: function() {
-		return this.transform.m;
-	}
-	,set_mass: function(mass) {
-		var a_ = mass;
-		var tmp = a_ * this.shape.get_inertia();
-		this.transform.i = tmp;
-		this.transform.m = mass;
-		return mass;
-	}
-	,get_inertia: function() {
-		var a_ = this.transform.m;
-		return a_ * this.shape.get_inertia();
-	}
-	,get_aabb: function() {
-		return this.shape.aabb;
-	}
-	,get_kind: function() {
-		return this.shape.kind;
-	}
-	,get_state: function() {
-		var b_ = this.transform.m;
-		var a_ = b_ == 0 ? 0 : 1 / b_;
-		if(a_ != 0) {
-			return rigid_dynamics_body_BodyState.Dynamic;
-		} else {
-			return rigid_dynamics_body_BodyState.Static;
-		}
-	}
-	,addTo: function(body) {
+	addTo: function(body) {
 		if(body == null) {
 			body = this;
 		} else {
@@ -746,6 +708,53 @@ rigid_dynamics_body_Body.prototype = {
 		}
 		this.prev = null;
 		this.next = null;
+	}
+	,getShape: function() {
+		return this.shape;
+	}
+	,getPosition: function() {
+		return this.transform.q;
+	}
+	,setPosition: function(pos) {
+		this.transform.q = pos;
+	}
+	,getRotation: function() {
+		return this.transform.qa;
+	}
+	,setRotation: function(rad) {
+		this.transform.qa = rad;
+	}
+	,getVelocity: function() {
+		var v = this.transform.p;
+		var b_ = this.transform.m;
+		var a_ = b_ == 0 ? 0 : 1 / b_;
+		var s = a_;
+		var this1 = { x : v.x * s, y : v.y * s};
+		return this1;
+	}
+	,setVelocity: function(vel) {
+		var s = this.transform.m;
+		var this1 = { x : vel.x * s, y : vel.y * s};
+		this.transform.p = this1;
+	}
+	,setMass: function(mass) {
+		var a_ = mass;
+		var tmp = a_ * this.shape.get_inertia();
+		this.transform.i = tmp;
+		this.transform.m = mass;
+	}
+	,getMass: function() {
+		return this.transform.m;
+	}
+	,getInertia: function() {
+		var a_ = this.transform.m;
+		return a_ * this.shape.get_inertia();
+	}
+	,getAABB: function() {
+		return this.shape.aabb;
+	}
+	,getKind: function() {
+		return this.shape.kind;
 	}
 	,__class__: rigid_dynamics_body_Body
 };
@@ -769,9 +778,9 @@ rigid_dynamics_body_shape_IShape.prototype = {
 	__class__: rigid_dynamics_body_shape_IShape
 };
 var rigid_dynamics_body_shape_Shape = $hx_exports["RHEI"]["Shape"] = function() {
-	this.uid = rigid_dynamics_body_shape_Shape.UID++;
 	this.assigned = haxe_ds_Option.None;
 	this.aabb = new rigid_dynamics_collision_broadphase_AABB();
+	this.aabb.shape = this;
 };
 rigid_dynamics_body_shape_Shape.__name__ = true;
 rigid_dynamics_body_shape_Shape.__interfaces__ = [rigid_dynamics_body_shape_IShape];
@@ -783,9 +792,6 @@ rigid_dynamics_body_shape_Shape.prototype = {
 		throw new js__$Boot_HaxeError("Not Implemented.");
 	}
 	,__class__: rigid_dynamics_body_shape_Shape
-};
-var rigid_dynamics_body_shape_ShapeKind = $hxEnums["rigid.dynamics.body.shape.ShapeKind"] = { __ename__ : true, __constructs__ : ["Sphere"]
-	,Sphere: {_hx_index:0,__enum__:"rigid.dynamics.body.shape.ShapeKind",toString:$estr}
 };
 var rigid_dynamics_body_shape_ShapeLink = function() {
 };
@@ -817,7 +823,7 @@ rigid_dynamics_body_shape_ShapeLink.prototype = {
 };
 var rigid_dynamics_body_shape_SphereShape = $hx_exports["RHEI"]["SphereShape"] = function(radius) {
 	rigid_dynamics_body_shape_Shape.call(this);
-	this.kind = rigid_dynamics_body_shape_ShapeKind.Sphere;
+	this.kind = "Sphere";
 	this.radius = radius;
 };
 rigid_dynamics_body_shape_SphereShape.__name__ = true;
@@ -866,14 +872,23 @@ rigid_dynamics_collision_Pair.prototype = {
 };
 var rigid_dynamics_collision_PairManager = function(type) {
 	this.numContacts = 0;
-	this.broadPhase = new rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase();
+	var tmp;
+	switch(type._hx_index) {
+	case 0:
+		tmp = new rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase();
+		break;
+	case 1:
+		tmp = new rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase();
+		break;
+	}
+	this.broadPhase = tmp;
 	this.narrowPhase = new rigid_dynamics_collision_narrowphase_NarrowPhase();
 };
 rigid_dynamics_collision_PairManager.__name__ = true;
 rigid_dynamics_collision_PairManager.prototype = {
 	__class__: rigid_dynamics_collision_PairManager
 };
-var rigid_dynamics_collision_broadphase_AABB = function() {
+var rigid_dynamics_collision_broadphase_AABB = $hx_exports["RHEI"]["AABB"] = function() {
 	var this1 = { aabb : this, pos : 0.0, entry : true};
 	this.edgeMinX = this1;
 	var this2 = { aabb : this, pos : 0.0, entry : false};
@@ -889,7 +904,19 @@ var rigid_dynamics_collision_broadphase_AABB = function() {
 };
 rigid_dynamics_collision_broadphase_AABB.__name__ = true;
 rigid_dynamics_collision_broadphase_AABB.prototype = {
-	__class__: rigid_dynamics_collision_broadphase_AABB
+	getMinX: function() {
+		return this.edgeMinX.pos;
+	}
+	,getMaxX: function() {
+		return this.edgeMaxX.pos;
+	}
+	,getMinY: function() {
+		return this.edgeMinY.pos;
+	}
+	,getMaxY: function() {
+		return this.edgeMaxY.pos;
+	}
+	,__class__: rigid_dynamics_collision_broadphase_AABB
 };
 var rigid_dynamics_collision_broadphase_BroadPhase = function() {
 	this.numPairs = 0;
@@ -913,8 +940,9 @@ rigid_dynamics_collision_broadphase_BroadPhase.prototype = {
 	}
 	,__class__: rigid_dynamics_collision_broadphase_BroadPhase
 };
-var rigid_dynamics_collision_broadphase_BroadPhaseKind = $hxEnums["rigid.dynamics.collision.broadphase.BroadPhaseKind"] = { __ename__ : true, __constructs__ : ["BruteForce"]
+var rigid_dynamics_collision_broadphase_BroadPhaseKind = $hxEnums["rigid.dynamics.collision.broadphase.BroadPhaseKind"] = { __ename__ : true, __constructs__ : ["BruteForce","SweepAndPrune"]
 	,BruteForce: {_hx_index:0,__enum__:"rigid.dynamics.collision.broadphase.BroadPhaseKind",toString:$estr}
+	,SweepAndPrune: {_hx_index:1,__enum__:"rigid.dynamics.collision.broadphase.BroadPhaseKind",toString:$estr}
 };
 var rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase = function() {
 	rigid_dynamics_collision_broadphase_BroadPhase.call(this);
@@ -950,6 +978,145 @@ rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase.prototype = 
 		}
 	}
 	,__class__: rigid_dynamics_collision_broadphase_bruteforce_BruteForceBroadPhase
+});
+var rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$ = {};
+rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.__name__ = true;
+rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.sort = function(this1) {
+	var c = 0;
+	var _g = 1;
+	var _g1 = this1.length;
+	while(_g < _g1) {
+		var i = _g++;
+		var tmp = this1[i];
+		if(this1[i - 1].pos > tmp.pos) {
+			var j = i;
+			while(true) {
+				this1[j--] = this1[j];
+				++c;
+				if(!(j > 0 && this1[j - 1].pos > tmp.pos)) {
+					break;
+				}
+			}
+			this1[j] = tmp;
+		}
+	}
+};
+var rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase = function() {
+	rigid_dynamics_collision_broadphase_BroadPhase.call(this);
+	var this1 = [];
+	this.axisX = this1;
+	var this2 = [];
+	this.axisY = this2;
+	this.activeAABBs = [];
+};
+rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.__name__ = true;
+rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.__super__ = rigid_dynamics_collision_broadphase_BroadPhase;
+rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase.prototype = $extend(rigid_dynamics_collision_broadphase_BroadPhase.prototype,{
+	addBody: function(body) {
+		rigid_dynamics_collision_broadphase_BroadPhase.prototype.addBody.call(this,body);
+		var this1 = this.axisX;
+		var edge = body.shape.aabb.edgeMinX;
+		edge.id = this1.length;
+		this1.push(edge);
+		var this2 = this.axisY;
+		var edge1 = body.shape.aabb.edgeMinY;
+		edge1.id = this2.length;
+		this2.push(edge1);
+		var this3 = this.axisX;
+		var edge2 = body.shape.aabb.edgeMaxX;
+		edge2.id = this3.length;
+		this3.push(edge2);
+		var this4 = this.axisY;
+		var edge3 = body.shape.aabb.edgeMaxY;
+		edge3.id = this4.length;
+		this4.push(edge3);
+	}
+	,removeBody: function(body) {
+		rigid_dynamics_collision_broadphase_BroadPhase.prototype.removeBody.call(this,body);
+		var this1 = this.axisX;
+		var edge = body.shape.aabb.edgeMinX;
+		(this1[edge.id] = this1.pop()).id = edge.id;
+		edge.id = null;
+		var this2 = this.axisY;
+		var edge1 = body.shape.aabb.edgeMinY;
+		(this2[edge1.id] = this2.pop()).id = edge1.id;
+		edge1.id = null;
+		var this3 = this.axisX;
+		var edge2 = body.shape.aabb.edgeMaxX;
+		(this3[edge2.id] = this3.pop()).id = edge2.id;
+		edge2.id = null;
+		var this4 = this.axisY;
+		var edge3 = body.shape.aabb.edgeMaxY;
+		(this4[edge3.id] = this4.pop()).id = edge3.id;
+		edge3.id = null;
+	}
+	,updatePairs: function() {
+		var sumX = 0;
+		var ptX = 0;
+		rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.sort(this.axisX);
+		var e = HxOverrides.iter(this.axisX);
+		while(e.hasNext()) {
+			var e1 = e.next();
+			switch(e1.entry) {
+			case false:
+				--ptX;
+				break;
+			case true:
+				sumX += ptX;
+				++ptX;
+				break;
+			}
+		}
+		var sumY = 0;
+		var ptY = 0;
+		rigid_dynamics_collision_broadphase_sweepandprune__$AABBEdgeList_AABBEdgeList_$Impl_$.sort(this.axisY);
+		var e2 = HxOverrides.iter(this.axisY);
+		while(e2.hasNext()) {
+			var e3 = e2.next();
+			switch(e3.entry) {
+			case false:
+				--ptY;
+				break;
+			case true:
+				sumY += ptY;
+				++ptY;
+				break;
+			}
+		}
+		var axis = sumX < sumY ? this.axisX : this.axisY;
+		this.activeAABBs[0] = axis[0].aabb;
+		var _g = 1;
+		var _g1 = axis.length;
+		while(_g < _g1) {
+			var i = _g++;
+			var aabb1 = axis[i].aabb;
+			if(axis[i].entry) {
+				var _g2 = 0;
+				var _g11 = this.activeAABBs;
+				while(_g2 < _g11.length) {
+					var aabb2 = _g11[_g2];
+					++_g2;
+					if(aabb1.edgeMinX.pos < aabb2.edgeMaxX.pos && aabb2.edgeMinX.pos < aabb1.edgeMaxX.pos && aabb1.edgeMinY.pos < aabb2.edgeMaxY.pos && aabb2.edgeMinY.pos < aabb1.edgeMaxY.pos) {
+						var pair = new rigid_dynamics_collision_Pair();
+						pair.s1 = aabb1.shape;
+						pair.s2 = aabb2.shape;
+						if(this.pairs == null) {
+							this.pairs = pair;
+						} else {
+							this.pairs.prev = pair;
+							pair.next = this.pairs;
+							this.pairs = pair;
+						}
+						this.numPairs++;
+					}
+				}
+				this.activeAABBs.push(aabb1);
+			} else {
+				HxOverrides.remove(this.activeAABBs,aabb1);
+			}
+		}
+	}
+	,__class__: rigid_dynamics_collision_broadphase_sweepandprune_SweepAndPruneBroadPhase
 });
 var rigid_dynamics_collision_narrowphase_Detector = function() {
 };
@@ -1496,6 +1663,8 @@ rigid_dynamics_constraint_MouseConstraint.prototype = $extend(rigid_dynamics_con
 	}
 	,__class__: rigid_dynamics_constraint_MouseConstraint
 });
+var util_Statistics = $hx_exports["RHEI"]["Statistics"] = function() { };
+util_Statistics.__name__ = true;
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
@@ -1509,5 +1678,5 @@ Object.defineProperty(js__$Boot_HaxeError.prototype,"message",{ get : function()
 	return String(this.val);
 }});
 js_Boot.__toStr = ({ }).toString;
-rigid_dynamics_body_shape_Shape.UID = 0;
+rigid_common_MathUtil.PI = 3.14159265358979;
 })(typeof exports != "undefined" ? exports : typeof window != "undefined" ? window : typeof self != "undefined" ? self : this, typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this);

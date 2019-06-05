@@ -5,6 +5,7 @@ package rigid.dynamics.body.shape;
  */
 
 @:expose("RHEI.ShapeKind")
-enum ShapeKind {
-	Sphere;
+@:enum
+abstract ShapeKind(String) {
+	var Sphere = 'Sphere';
 }

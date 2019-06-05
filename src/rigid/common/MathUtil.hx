@@ -7,8 +7,7 @@ package rigid.common;
 
 @:expose("RHEI.MathUtil")
 class MathUtil {
-	static public var PI(get, never):Float;
-	static inline function get_PI() return 3.14159265358979;
+	static public inline var PI = 3.14159265358979;
 	
 	static public inline function sin(v:Float) return Math.sin(v);
 	

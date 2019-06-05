@@ -1,5 +1,4 @@
 package rigid.dynamics.collision;
-import haxe.ds.Option;
 import rigid.dynamics.body.shape.ShapeLink;
 import rigid.dynamics.collision.broadphase.AABB;
 import rigid.dynamics.collision.broadphase.BroadPhase;

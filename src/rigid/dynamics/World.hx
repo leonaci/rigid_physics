@@ -1,5 +1,4 @@
 package rigid.dynamics;
-import haxe.ds.List;
 import haxe.ds.Option;
 import rigid.common.Constant;
 import rigid.common.Vec2;
@@ -9,6 +8,8 @@ import rigid.dynamics.collision.PairManager;
 import rigid.dynamics.collision.broadphase.BroadPhaseKind;
 import rigid.dynamics.constraint.Constraint;
 import rigid.dynamics.constraint.ContactConstraint;
+import util.Statistics;
+import util.Util;
 
 /**
  * ...
@@ -27,6 +28,9 @@ class World {
 	
 	public function new() {
 		this.constraints = [];
+		
+		numBodies = 0;
+		
 		this.pairManager = new PairManager(BroadPhaseKind.SweepAndPrune);
 	}
 	
@@ -60,39 +64,49 @@ class World {
 	}
 	
 	public function step(dt:Float) {
-		detectConstraints();
-		solveConstraints(dt);
-		if(underGravity) integrateGravity();
-		integrate(dt);
+		Util.profile(Statistics.totalElapsedTime, {
+			detectConstraints();
+			Util.profile(Statistics.resolutionProcessElapsedTime, {
+				resolveConstraints(dt);
+			});
+			Util.profile(Statistics.integrationProcessElapsedTime, {
+				if(underGravity) integrateGravity();
+				integrate(dt);
+			});
+		});
 	}
 
 	@:extern
 	private inline function detectConstraints() {
-		//broad phase collision judgement
-		pairManager.broadJudge();
+		Util.profile(Statistics.broadphaseProcessElapsedTime, {
+			//broad phase collision judgement
+			pairManager.broadJudge();
+		});
 		
-		//narrow phase collision judgement
-		pairManager.narrowJudge();
-		
-		//remove old contacts
-		removeContacts();
-		
-		//update contacts
-		var contact:Contact = pairManager.contacts;
-		while (contact != null) {
-			var nextContact = contact.next;
+		Util.profile(Statistics.narrowphaseProcessElapsedTime, {
+			//narrow phase collision judgement
+			pairManager.narrowJudge();
 			
-			switch(contact.constraint) {
-				case Option.Some(cc): constraints.push(cc);
-				case Option.None:
+			//remove old contacts
+			removeOldContacts();
+			
+			//update contacts
+			var contact:Contact = pairManager.contacts;
+			while (contact != null) {
+				var nextContact = contact.next;
+				
+				switch(contact.constraint) {
+					case Option.Some(cc): constraints.push(cc);
+					case Option.None:
+				}
+				
+				contact = nextContact;
 			}
-			
-			contact = nextContact;
-		}
+		});
 	}
 	
 	@:extern
-	private inline function solveConstraints(dt:Float) {
+	private inline function resolveConstraints(dt:Float) {
 		for(c in constraints) c.presolve(dt);
 		for(c in constraints) c.solveMoment();
 	}
@@ -116,7 +130,7 @@ class World {
 		}
 	}
 	
-	private inline function removeContacts() {
+	private inline function removeOldContacts() {
 		for(c in constraints) if(Std.is(c, ContactConstraint)) this.removeConstraint(c);
 	}
 }

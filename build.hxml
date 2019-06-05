@@ -17,3 +17,4 @@ rigid.dynamics.constraint.ContactConstraint
 rigid.dynamics.constraint.CylindricalConstraint
 rigid.dynamics.constraint.DistanceConstraint
 rigid.dynamics.constraint.MouseConstraint
+util.Statistics

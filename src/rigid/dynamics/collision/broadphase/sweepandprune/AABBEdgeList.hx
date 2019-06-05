@@ -6,8 +6,6 @@ package rigid.dynamics.collision.broadphase.sweepandprune;
  */
 @:forward(length, iterator)
 abstract AABBEdgeList(Array<AABBEdge>) to Array<AABBEdge> {
-	static private var UID:Int = 0;
-	
 	public inline function new() this = [];
 	
 	public inline function insert(edge:AABBEdge):Void {
@@ -35,6 +33,5 @@ abstract AABBEdgeList(Array<AABBEdge>) to Array<AABBEdge> {
 				this[j] = tmp;
 			}
 		}
-		trace(c);
 	}
 }

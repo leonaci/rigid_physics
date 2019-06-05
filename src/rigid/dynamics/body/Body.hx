@@ -29,40 +29,43 @@ class Body {
 	public var shape(default, null):Shape;
 	
 	public var q(get, set):Vec2;
-	inline function get_q() return transform.q;
-	inline function set_q(q:Vec2) return transform.q = q;
+	extern inline function get_q() return transform.q;
+	extern inline function set_q(q:Vec2) return transform.q = q;
 	
 	public var qa(get, set):Float;
-	inline function get_qa() return transform.qa;
-	inline function set_qa(qa:Float) return transform.qa = qa;
+	extern inline function get_qa() return transform.qa;
+	extern inline function set_qa(qa:Float) return transform.qa = qa;
 	
 	public var v(get, set):Vec2;
-	inline function get_v() return transform.p*(1/mass);
-	inline function set_v(v:Vec2) return transform.p = mass*v;
+	extern inline function get_v() return transform.p*(1/mass);
+	extern inline function set_v(v:Vec2) {
+		transform.p = mass*v;
+		return v;
+	}
 	
 	public var va(get, set):Float;
-	inline function get_va() return transform.pa*(1/inertia);
-	inline function set_va(va:Float) return transform.pa = inertia*va;
+	extern inline function get_va() return transform.pa*(1/inertia);
+	extern inline function set_va(va:Float) return transform.pa = inertia*va;
 	
 	public var mass(get, set):MFloat;
-	inline function get_mass():MFloat return transform.m;
-	inline function set_mass(mass:MFloat) {
+	extern inline function get_mass():MFloat return transform.m;
+	extern inline function set_mass(mass:MFloat) {
 		transform.i = mass * shape.inertia;
 		transform.m = mass;
 		return mass;
 	}
 	
 	public var inertia(get, never):MFloat;
-	inline function get_inertia() return mass * shape.inertia;
+	extern inline function get_inertia() return mass * shape.inertia;
 	
 	public var aabb(get, null):AABB;
-	inline function get_aabb():AABB return shape.aabb;
+	extern inline function get_aabb():AABB return shape.aabb;
 	
 	public var kind(get, null):ShapeKind;
-	inline function get_kind():ShapeKind return shape.kind;
+	extern inline function get_kind():ShapeKind return shape.kind;
 	
 	public var state(get, never):BodyState;
-	inline function get_state() return 1/mass!=0? BodyState.Dynamic : BodyState.Static;
+	extern inline function get_state() return 1/mass!=0? BodyState.Dynamic : BodyState.Static;
 	
 	public function new(shape:Shape) {
 		this.transform = new Transform();
@@ -108,4 +111,21 @@ class Body {
 		this.prev = null;
 		this.next = null;
 	}
+	
+	public function getShape():Shape return shape;
+	
+	public function getPosition():Vec2 return q;
+	public function setPosition(pos:Vec2):Void q = pos;
+
+	public function getRotation():Float return qa;
+	public function setRotation(rad:Float):Void qa = rad;
+
+	public function getVelocity():Vec2 return v;
+	public function setVelocity(vel:Vec2):Void v = vel;
+	
+	public function setMass(mass:Float):Void this.mass = mass;
+	public function getMass():Float return mass;
+	public function getInertia():Float return inertia;
+	public function getAABB():AABB return aabb;
+	public function getKind():ShapeKind return kind;
 }
